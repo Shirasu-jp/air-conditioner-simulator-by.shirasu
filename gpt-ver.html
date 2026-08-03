@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>エアコンシミュレーター</title>
+<style>
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  margin: 0;
+  background: #f5f7fa;
+  color: #333;
+}
+.container {
+  max-width: 600px;
+  margin: auto;
+  padding: 16px;
+}
+h1 {
+  text-align: center;
+  font-size: 20px;
+}
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+label {
+  display: block;
+  margin-top: 12px;
+  font-size: 14px;
+}
+input[type="range"] {
+  width: 100%;
+}
+.value {
+  font-weight: bold;
+  float: right;
+}
+.result {
+  font-size: 18px;
+  margin: 10px 0;
+}
+select, input[type="checkbox"] {
+  margin-top: 6px;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+  <h1>エアコンシミュレーター</h1>
+
+  <div class="card">
+    <h3>外的要因</h3>
+
+    <label>外気温度 <span id="outTempVal" class="value"></span></label>
+    <input type="range" id="outTemp" min="0" max="40" step="0.1" value="35">
+
+    <label>外気湿度 <span id="humidityVal" class="value"></span></label>
+    <input type="range" id="humidity" min="20" max="100" step="1" value="70">
+  </div>
+
+  <div class="card">
+    <h3>リモコン設定</h3>
+
+    <label>運転モード</label>
+    <select id="mode">
+      <option>自動</option>
+      <option>冷房</option>
+      <option>暖房</option>
+      <option>ドライ</option>
+      <option>送風</option>
+    </select>
+
+    <label>設定温度 <span id="setTempVal" class="value"></span></label>
+    <input type="range" id="setTemp" min="18" max="30" step="0.5" value="26">
+
+    <label>風量</label>
+    <select id="fan">
+      <option>自動</option>
+      <option>弱</option>
+      <option>中</option>
+      <option>強</option>
+    </select>
+
+    <label>
+      <input type="checkbox" id="streamer"> ストリーマ機能
+    </label>
+  </div>
+
+  <div class="card">
+    <h3>シミュレーション結果</h3>
+    <div class="result">体感温度: <span id="feelTemp"></span> ℃</div>
+    <div class="result">消費電力: <span id="power"></span> W</div>
+    <div class="result">電気代（1時間）: <span id="cost"></span> 円</div>
+  </div>
+</div>
+
+<script>
+const outTemp = document.getElementById("outTemp");
+const humidity = document.getElementById("humidity");
+const setTemp = document.getElementById("setTemp");
+const mode = document.getElementById("mode");
+const fan = document.getElementById("fan");
+const streamer = document.getElementById("streamer");
+
+function updateLabels() {
+  document.getElementById("outTempVal").textContent = outTemp.value + "℃";
+  document.getElementById("humidityVal").textContent = humidity.value + "%";
+  document.getElementById("setTempVal").textContent = setTemp.value + "℃";
+}
+
+function calculate() {
+  let t = parseFloat(setTemp.value);
+  let h = parseFloat(humidity.value);
+
+  // 体感温度（簡易ミスナール風）
+  let feel = t + (0.33 * h/100 * 6) - 4;
+
+  // 風量補正
+  const fanEffect = {
+    "自動": 0,
+    "弱": -0.3,
+    "中": -0.7,
+    "強": -1.2
+  };
+  feel += fanEffect[fan.value];
+
+  // 消費電力
+  let basePower = 500;
+  let diff = Math.abs(outTemp.value - setTemp.value);
+
+  let power = basePower * (1 + diff * 0.05);
+
+  // モード補正
+  const modeFactor = {
+    "自動": 1.0,
+    "冷房": 1.0,
+    "暖房": 1.2,
+    "ドライ": 1.1,
+    "送風": 0.1
+  };
+  power *= modeFactor[mode.value];
+
+  // 風量補正
+  const fanFactor = {
+    "自動": 1.0,
+    "弱": 0.9,
+    "中": 1.0,
+    "強": 1.2
+  };
+  power *= fanFactor[fan.value];
+
+  // ストリーマ
+  if (streamer.checked) power += 15;
+
+  // 電気代
+  let cost = (power / 1000) * 31;
+
+  // 表示
+  document.getElementById("feelTemp").textContent = feel.toFixed(1);
+  document.getElementById("power").textContent = Math.round(power);
+  document.getElementById("cost").textContent = cost.toFixed(2);
+}
+
+function updateAll() {
+  updateLabels();
+  calculate();
+}
+
+// イベント
+document.querySelectorAll("input, select").forEach(el => {
+  el.addEventListener("input", updateAll);
+});
+
+// 初期化
+updateAll();
+</script>
+</body>
+</html>
