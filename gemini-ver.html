@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>エアコン リアルタイムシミュレーター</title>
+  <style>
+    :root {
+      --primary-color: #0284c7;
+      --bg-color: #f0f4f8;
+      --card-bg: #ffffff;
+      --text-main: #334155;
+      --text-muted: #64748b;
+      --border-color: #e2e8f0;
+      --result-bg: #0f172a;
+      --result-text: #f8fafc;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      line-height: 1.6;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: var(--card-bg);
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    @media (min-width: 768px) {
+      .container {
+        flex-direction: row;
+      }
+    }
+
+    .panel {
+      padding: 30px;
+      flex: 1;
+    }
+
+    /* 入力パネル */
+    .input-panel {
+      border-right: 1px solid var(--border-color);
+    }
+
+    h2 {
+      font-size: 1.25rem;
+      margin-bottom: 20px;
+      color: var(--primary-color);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+    }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+
+    .val-display {
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: var(--primary-color);
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--primary-color);
+      cursor: pointer;
+    }
+
+    select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 1rem;
+      color: var(--text-main);
+      background-color: #fff;
+      cursor: pointer;
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+    }
+
+    .checkbox-group input {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--primary-color);
+      cursor: pointer;
+    }
+
+    /* 出力パネル */
+    .output-panel {
+      background-color: var(--result-bg);
+      color: var(--result-text);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .output-panel h2 {
+      color: #38bdf8;
+    }
+
+    .result-card {
+      background: rgba(255,255,255,0.05);
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 15px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .result-card:last-child {
+      margin-bottom: 0;
+    }
+
+    .result-label {
+      font-size: 0.9rem;
+      color: #94a3b8;
+      margin-bottom: 5px;
+    }
+
+    .result-value {
+      font-size: 2.5rem;
+      font-weight: bold;
+      display: flex;
+      align-items: baseline;
+      gap: 5px;
+    }
+
+    .result-unit {
+      font-size: 1rem;
+      font-weight: normal;
+      color: #cbd5e1;
+    }
+
+    hr.divider {
+      border: 0;
+      height: 1px;
+      background: var(--border-color);
+      margin: 25px 0;
+    }
+
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- 入力エリア -->
+    <div class="panel input-panel">
+      <h2>🌡️ 環境・リモコン設定</h2>
+      
+      <div class="form-group">
+        <div class="slider-header">
+          <label for="outTemp">外気温度</label>
+          <span class="val-display"><span id="outTempVal">35.0</span> ℃</span>
+        </div>
+        <input type="range" id="outTemp" min="0.0" max="40.0" step="0.5" value="35.0">
+      </div>
+
+      <div class="form-group">
+        <div class="slider-header">
+          <label for="outHumid">外気湿度</label>
+          <span class="val-display"><span id="outHumidVal">70</span> %</span>
+        </div>
+        <input type="range" id="outHumid" min="20" max="100" step="1" value="70">
+      </div>
+
+      <hr class="divider">
+
+      <div class="form-group">
+        <label for="mode">運転モード</label>
+        <select id="mode">
+          <option value="auto">自動</option>
+          <option value="cool" selected>冷房</option>
+          <option value="heat">暖房</option>
+          <option value="dry">ドライ</option>
+          <option value="fan">送風</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <div class="slider-header">
+          <label for="setTemp">設定温度</label>
+          <span class="val-display"><span id="setTempVal">26.0</span> ℃</span>
+        </div>
+        <input type="range" id="setTemp" min="18.0" max="30.0" step="0.5" value="26.0">
+      </div>
+
+      <div class="form-group">
+        <label for="airflow">風量</label>
+        <select id="airflow">
+          <option value="auto" selected>自動</option>
+          <option value="weak">弱</option>
+          <option value="med">中</option>
+          <option value="strong">強</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="checkbox-group">
+          <input type="checkbox" id="extraFeature">
+          <span>空気清浄/ストリーマ機能 (ON)</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- 出力（結果）エリア -->
+    <div class="panel output-panel">
+      <h2>💡 シミュレーション結果</h2>
+
+      <div class="result-card">
+        <div class="result-label">現在の推定 体感温度</div>
+        <div class="result-value">
+          <span id="resApparentTemp">--</span>
+          <span class="result-unit">℃</span>
+        </div>
+      </div>
+
+      <div class="result-card">
+        <div class="result-label">現在の推定 消費電力</div>
+        <div class="result-value">
+          <span id="resPower">--</span>
+          <span class="result-unit">W</span>
+        </div>
+      </div>
+
+      <div class="result-card">
+        <div class="result-label">1時間あたりの推定 電気代</div>
+        <div class="result-value">
+          <span id="resCost">--</span>
+          <span class="result-unit">円</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // DOM要素の取得
+    const inputs = document.querySelectorAll('input, select');
+    const outTempEl = document.getElementById('outTemp');
+    const outHumidEl = document.getElementById('outHumid');
+    const modeEl = document.getElementById('mode');
+    const setTempEl = document.getElementById('setTemp');
+    const airflowEl = document.getElementById('airflow');
+    const extraFeatureEl = document.getElementById('extraFeature');
+
+    // 表示用要素
+    const outTempVal = document.getElementById('outTempVal');
+    const outHumidVal = document.getElementById('outHumidVal');
+    const setTempVal = document.getElementById('setTempVal');
+
+    const resApparentTemp = document.getElementById('resApparentTemp');
+    const resPower = document.getElementById('resPower');
+    const resCost = document.getElementById('resCost');
+
+    // イベントリスナーの登録（変更があるたびに計算）
+    inputs.forEach(input => {
+      input.addEventListener('input', updateSimulation);
+    });
+
+    function updateSimulation() {
+      // 1. UIの数値更新
+      const outTemp = parseFloat(outTempEl.value);
+      const outHumid = parseInt(outHumidEl.value, 10);
+      const setTemp = parseFloat(setTempEl.value);
+      const mode = modeEl.value;
+      const airflow = airflowEl.value;
+      const hasExtra = extraFeatureEl.checked;
+
+      outTempVal.textContent = outTemp.toFixed(1);
+      outHumidVal.textContent = outHumid;
+      
+      // 送風モードの場合は設定温度を無効化に近い形で見せる（今回はそのまま表示）
+      setTempVal.textContent = mode === 'fan' ? '-' : setTemp.toFixed(1);
+
+      // --- 2. 体感温度の計算 ---
+      // 室内温度は設定温度に到達したと仮定（送風の場合は外気温度に依存）
+      let indoorTemp = (mode === 'fan') ? outTemp : setTemp;
+      
+      // 室内湿度の概算仮定（モードによって変わる）
+      let indoorHumid;
+      switch(mode) {
+        case 'cool': indoorHumid = 50; break;
+        case 'dry':  indoorHumid = 40; break;
+        case 'heat': indoorHumid = 30; break;
+        default:     indoorHumid = outHumid; // auto, fanは外気に近いとする
+      }
+
+      // ミスナールの体感温度計算式（簡略版）
+      // T - 0.4 * (T - 10) * (1 - H/100)
+      let apparentTemp = indoorTemp - 0.4 * (indoorTemp - 10) * (1 - (indoorHumid / 100));
+
+      // 風量による体感温度の補正
+      let windEffect = 0;
+      if (mode === 'heat') {
+        // 暖房時は温風が当たるため体感温度が上がる
+        if (airflow === 'weak') windEffect = 0.5;
+        if (airflow === 'med') windEffect = 1.0;
+        if (airflow === 'strong') windEffect = 1.5;
+        if (airflow === 'auto') windEffect = 1.0;
+      } else {
+        // 冷房・ドライ・送風時は風が当たると下がる
+        if (airflow === 'weak') windEffect = -0.5;
+        if (airflow === 'med') windEffect = -1.0;
+        if (airflow === 'strong') windEffect = -1.5;
+        if (airflow === 'auto') windEffect = -1.0;
+      }
+      apparentTemp += windEffect;
+
+      // --- 3. 消費電力の計算 ---
+      let basePower = 500; // 基準値 (W)
+      let currentMode = mode;
+      
+      // 自動モードの実態予測（外気と設定の差で冷暖房を判定）
+      if (currentMode === 'auto') {
+        currentMode = outTemp > setTemp ? 'cool' : 'heat';
+      }
+
+      // モード別の基準値調整
+      if (currentMode === 'heat') basePower = 600;
+      if (currentMode === 'dry')  basePower = 550;
+      if (currentMode === 'fan')  basePower = 30;
+
+      // 外気温と設定温度の差による負荷係数（差が1℃につき5%アップと仮定）
+      const tempDiff = Math.abs(outTemp - setTemp);
+      let powerMultiplier = 1 + (tempDiff * 0.05);
+
+      // 送風の場合は温度差の影響を受けない
+      if (mode === 'fan') {
+        powerMultiplier = 1;
+      }
+
+      let power = basePower * powerMultiplier;
+
+      // 風量による電力補正
+      if (airflow === 'weak') power *= 0.9;
+      if (airflow === 'med')  power *= 1.0;
+      if (airflow === 'strong') power *= 1.2;
+      
+      // 空気清浄・ストリーマ機能等の追加電力
+      if (hasExtra) {
+        power += 15;
+      }
+
+      // --- 4. 電気代の計算 ---
+      // (W / 1000) * 31円/kWh
+      const costPerHour = (power / 1000) * 31;
+
+      // --- 5. 画面への反映 ---
+      resApparentTemp.textContent = apparentTemp.toFixed(1);
+      resPower.textContent = Math.round(power);
+      resCost.textContent = costPerHour.toFixed(1);
+    }
+
+    // 初期ロード時に1回計算を実行
+    updateSimulation();
+  </script>
+</body>
+</html>

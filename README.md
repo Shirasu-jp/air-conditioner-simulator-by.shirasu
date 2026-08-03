@@ -1,1 +1,0 @@
-# air-conditioner-simulator-by.shirasu
