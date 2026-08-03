@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>エアコン リアルタイムシミュレーター (Gemini Ver.)</title>
+  <style>
+    :root {
+      --primary-color: #0284c7;
+      --bg-color: #f0f4f8;
+      --card-bg: #ffffff;
+      --text-main: #334155;
+      --text-muted: #64748b;
+      --border-color: #e2e8f0;
+      --result-bg: #0f172a;
+      --result-text: #f8fafc;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      line-height: 1.6;
+      padding: 20px;
+    }
+
+    /* === お天気・現在地パネル === */
+    .location-banner {
+      max-width: 900px;
+      margin: 0 auto 20px auto;
+      background: #ffffff;
+      border: 1px solid #e0f2fe;
+      border-left: 6px solid var(--primary-color);
+      border-radius: 12px;
+      padding: 16px 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .banner-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .location-title {
+      font-weight: bold;
+      font-size: 1.05rem;
+      color: #0c4a6e;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .location-metrics {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .metric-badge {
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+      color: #0369a1;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      font-weight: bold;
+    }
+
+    .banner-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    /* ボタン共通デザイン */
+    .btn {
+      border: none;
+      border-radius: 6px;
+      padding: 8px 14px;
+      font-size: 0.85rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-primary {
+      background-color: var(--primary-color);
+      color: #ffffff;
+    }
+    .btn-primary:hover {
+      background-color: #0369a1;
+    }
+
+    .btn-secondary {
+      background-color: #f1f5f9;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+    }
+    .btn-secondary:hover {
+      background-color: #e2e8f0;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* === メインコンテナ === */
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: var(--card-bg);
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    @media (min-width: 768px) {
+      .container {
+        flex-direction: row;
+      }
+      .banner-header {
+        flex-direction: row;
+      }
+    }
+
+    .panel {
+      padding: 30px;
+      flex: 1;
+    }
+
+    .input-panel {
+      border-right: 1px solid var(--border-color);
+    }
+
+    h2 {
+      font-size: 1.25rem;
+      margin-bottom: 20px;
+      color: var(--primary-color);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+    }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+
+    .val-display {
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: var(--primary-color);
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--primary-color);
+      cursor: pointer;
+    }
+
+    select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 1rem;
+      color: var(--text-main);
+      background-color: #fff;
+      cursor: pointer;
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+    }
+
+    .checkbox-group input {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--primary-color);
+      cursor: pointer;
+    }
+
+    /* 出力パネル */
+    .output-panel {
+      background-color: var(--result-bg);
+      color: var(--result-text);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .output-panel h2 {
+      color: #38bdf8;
+    }
+
+    .result-card {
+      background: rgba(255,255,255,0.05);
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 15px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .result-card:last-child {
+      margin-bottom: 0;
+    }
+
+    .result-label {
+      font-size: 0.9rem;
+      color: #94a3b8;
+      margin-bottom: 5px;
+    }
+
+    .result-value {
+      font-size: 2.5rem;
+      font-weight: bold;
+      display: flex;
+      align-items: baseline;
+      gap: 5px;
+    }
+
+    .result-unit {
+      font-size: 1rem;
+      font-weight: normal;
+      color: #cbd5e1;
+    }
+
+    hr.divider {
+      border: 0;
+      height: 1px;
+      background: var(--border-color);
+      margin: 25px 0;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 📍 現在地・リアルタイム気候表示バナー -->
+  <div class="location-banner">
+    <div class="banner-header">
+      <div class="location-title">
+        📍 場所: <span id="locationName">位置情報を取得中...</span>
+      </div>
+      <div class="location-metrics">
+        <span class="metric-badge">気温: <strong id="geoTemp">--</strong> ℃</span>
+        <span class="metric-badge">湿度: <strong id="geoHumidity">--</strong> %</span>
+      </div>
+    </div>
+    <div class="banner-actions">
+      <button id="btnApplyWeather" class="btn btn-primary" disabled>
+        📥 取得した気候を外気に自動入力
+      </button>
+      <button id="btnRefreshWeather" class="btn btn-secondary">
+        🔄 情報再取得
+      </button>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- 入力エリア -->
+    <div class="panel input-panel">
+      <h2>🌡️ 環境・リモコン設定</h2>
+      
+      <div class="form-group">
+        <div class="slider-header">
+          <label for="outTemp">外気温度</label>
+          <span class="val-display"><span id="outTempVal">35.0</span> ℃</span>
+        </div>
+        <input type="range" id="outTemp" min="0.0" max="40.0" step="0.5" value="35.0">
+      </div>
+
+      <div class="form-group">
+        <div class="slider-header">
+          <label for="outHumid">外気湿度</label>
+          <span class="val-display"><span id="outHumidVal">70</span> %</span>
+        </div>
+        <input type="range" id="outHumid" min="20" max="100" step="1" value="70">
+      </div>
+
+      <hr class="divider">
+
+      <div class="form-group">
+        <label for="mode">運転モード</label>
+        <select id="mode">
+          <option value="auto">自動</option>
+          <option value="cool" selected>冷房</option>
+          <option value="heat">暖房</option>
+          <option value="dry">ドライ</option>
+          <option value="fan">送風</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <div class="slider-header">
+          <label for="setTemp">設定温度</label>
+          <span class="val-display"><span id="setTempVal">26.0</span> ℃</span>
+        </div>
+        <input type="range" id="setTemp" min="18.0" max="30.0" step="0.5" value="26.0">
+      </div>
+
+      <div class="form-group">
+        <label for="airflow">風量</label>
+        <select id="airflow">
+          <option value="auto" selected>自動</option>
+          <option value="weak">弱</option>
+          <option value="med">中</option>
+          <option value="strong">強</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="checkbox-group">
+          <input type="checkbox" id="extraFeature">
+          <span>空気清浄/ストリーマ機能 (ON)</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- 出力（結果）エリア -->
+    <div class="panel output-panel">
+      <h2>💡 シミュレーション結果</h2>
+
+      <div class="result-card">
+        <div class="result-label">現在の推定 体感温度</div>
+        <div class="result-value">
+          <span id="resApparentTemp">--</span>
+          <span class="result-unit">℃</span>
+        </div>
+      </div>
+
+      <div class="result-card">
+        <div class="result-label">現在の推定 消費電力</div>
+        <div class="result-value">
+          <span id="resPower">--</span>
+          <span class="result-unit">W</span>
+        </div>
+      </div>
+
+      <div class="result-card">
+        <div class="result-label">1時間あたりの推定 電気代</div>
+        <div class="result-value">
+          <span id="resCost">--</span>
+          <span class="result-unit">円</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- DOM要素 ---
+    const inputs = document.querySelectorAll('input, select');
+    const outTempEl = document.getElementById('outTemp');
+    const outHumidEl = document.getElementById('outHumid');
+    const modeEl = document.getElementById('mode');
+    const setTempEl = document.getElementById('setTemp');
+    const airflowEl = document.getElementById('airflow');
+    const extraFeatureEl = document.getElementById('extraFeature');
+
+    const outTempVal = document.getElementById('outTempVal');
+    const outHumidVal = document.getElementById('outHumidVal');
+    const setTempVal = document.getElementById('setTempVal');
+
+    const resApparentTemp = document.getElementById('resApparentTemp');
+    const resPower = document.getElementById('resPower');
+    const resCost = document.getElementById('resCost');
+
+    // お天気バナー用DOM
+    const locationNameEl = document.getElementById('locationName');
+    const geoTempEl = document.getElementById('geoTemp');
+    const geoHumidityEl = document.getElementById('geoHumidity');
+    const btnApplyWeather = document.getElementById('btnApplyWeather');
+    const btnRefreshWeather = document.getElementById('btnRefreshWeather');
+
+    // 取得した現在地データを一時保持する変数
+    let fetchedData = {
+      temp: null,
+      humidity: null
+    };
+
+    // イベントリスナー
+    inputs.forEach(input => {
+      input.addEventListener('input', updateSimulation);
+    });
+
+    btnRefreshWeather.addEventListener('click', fetchLocationAndWeather);
+    btnApplyWeather.addEventListener('click', applyFetchedWeather);
+
+    // --- シミュレーション計算ロジック ---
+    function updateSimulation() {
+      const outTemp = parseFloat(outTempEl.value);
+      const outHumid = parseInt(outHumidEl.value, 10);
+      const setTemp = parseFloat(setTempEl.value);
+      const mode = modeEl.value;
+      const airflow = airflowEl.value;
+      const hasExtra = extraFeatureEl.checked;
+
+      outTempVal.textContent = outTemp.toFixed(1);
+      outHumidVal.textContent = outHumid;
+      setTempVal.textContent = mode === 'fan' ? '-' : setTemp.toFixed(1);
+
+      // 体感温度計算
+      let indoorTemp = (mode === 'fan') ? outTemp : setTemp;
+      let indoorHumid;
+      switch(mode) {
+        case 'cool': indoorHumid = 50; break;
+        case 'dry':  indoorHumid = 40; break;
+        case 'heat': indoorHumid = 30; break;
+        default:     indoorHumid = outHumid;
+      }
+
+      let apparentTemp = indoorTemp - 0.4 * (indoorTemp - 10) * (1 - (indoorHumid / 100));
+
+      let windEffect = 0;
+      if (mode === 'heat') {
+        if (airflow === 'weak') windEffect = 0.5;
+        if (airflow === 'med') windEffect = 1.0;
+        if (airflow === 'strong') windEffect = 1.5;
+        if (airflow === 'auto') windEffect = 1.0;
+      } else {
+        if (airflow === 'weak') windEffect = -0.5;
+        if (airflow === 'med') windEffect = -1.0;
+        if (airflow === 'strong') windEffect = -1.5;
+        if (airflow === 'auto') windEffect = -1.0;
+      }
+      apparentTemp += windEffect;
+
+      // 消費電力計算
+      let basePower = 500;
+      let currentMode = mode;
+      if (currentMode === 'auto') {
+        currentMode = outTemp > setTemp ? 'cool' : 'heat';
+      }
+
+      if (currentMode === 'heat') basePower = 600;
+      if (currentMode === 'dry')  basePower = 550;
+      if (currentMode === 'fan')  basePower = 30;
+
+      const tempDiff = Math.abs(outTemp - setTemp);
+      let powerMultiplier = (mode === 'fan') ? 1 : 1 + (tempDiff * 0.05);
+      let power = basePower * powerMultiplier;
+
+      if (airflow === 'weak') power *= 0.9;
+      if (airflow === 'med')  power *= 1.0;
+      if (airflow === 'strong') power *= 1.2;
+      if (hasExtra) power += 15;
+
+      const costPerHour = (power / 1000) * 31;
+
+      // 反映
+      resApparentTemp.textContent = apparentTemp.toFixed(1);
+      resPower.textContent = Math.round(power);
+      resCost.textContent = costPerHour.toFixed(1);
+    }
+
+    // --- 現在地・気候情報の取得処理 ---
+    function fetchLocationAndWeather() {
+      locationNameEl.textContent = '位置情報を取得中...';
+      geoTempEl.textContent = '--';
+      geoHumidityEl.textContent = '--';
+      btnApplyWeather.disabled = true;
+
+      if (!navigator.geolocation) {
+        locationNameEl.textContent = 'お使いのブラウザは位置情報非対応です';
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+
+          try {
+            // 1. 気象データの取得 (Open-Meteo)
+            const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m`);
+            const weatherData = await weatherRes.json();
+
+            fetchedData.temp = weatherData.current.temperature_2m;
+            fetchedData.humidity = weatherData.current.relative_humidity_2m;
+
+            // 2. 地名（住所）の逆ジオコーディング取得 (BigDataCloud Free API)
+            try {
+              const geoRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=ja`);
+              const geoData = await geoRes.json();
+              
+              const pref = geoData.principalSubdivision || '';
+              const city = geoData.city || geoData.locality || '';
+              locationNameEl.textContent = `${pref} ${city}`.trim() || '現在地付近';
+            } catch (e) {
+              locationNameEl.textContent = '現在地付近';
+            }
+
+            // バナーに数値セット & 自動入力ボタンを有効化
+            geoTempEl.textContent = fetchedData.temp.toFixed(1);
+            geoHumidityEl.textContent = fetchedData.humidity;
+            btnApplyWeather.disabled = false;
+
+          } catch (error) {
+            locationNameEl.textContent = '気象データの取得に失敗しました';
+            console.error(error);
+          }
+        },
+        (error) => {
+          locationNameEl.textContent = '位置情報の取得が拒否されました';
+        }
+      );
+    }
+
+    // --- 取得データをシミュレーターに自動適用する関数 ---
+    function applyFetchedWeather() {
+      if (fetchedData.temp !== null && fetchedData.humidity !== null) {
+        outTempEl.value = fetchedData.temp.toFixed(1);
+        outHumidEl.value = fetchedData.humidity;
+        updateSimulation(); // 計算実行
+      }
+    }
+
+    // 初期起動
+    updateSimulation();
+    fetchLocationAndWeather();
+  </script>
+</body>
+</html>
