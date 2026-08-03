@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes" />
+  <title>エアコン体感・電力シミュレーター</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    }
+    body {
+      background: #f4f7fc;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .sim-card {
+      max-width: 600px;
+      width: 100%;
+      background: #ffffff;
+      border-radius: 32px;
+      box-shadow: 0 20px 40px rgba(0, 20, 40, 0.08), 0 8px 20px rgba(0, 0, 0, 0.04);
+      padding: 28px 24px 32px;
+      transition: box-shadow 0.2s;
+    }
+    h1 {
+      font-size: 1.7rem;
+      font-weight: 600;
+      color: #0b2b3d;
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .subhead {
+      color: #5b6f82;
+      font-size: 0.9rem;
+      font-weight: 400;
+      border-left: 3px solid #3b9eff;
+      padding-left: 14px;
+      margin-bottom: 24px;
+      background: #f0f5fe;
+      border-radius: 0 12px 12px 0;
+      line-height: 1.4;
+      padding: 8px 14px;
+    }
+    .input-section {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .param-group {
+      background: #f9fbfd;
+      border-radius: 20px;
+      padding: 16px 18px 18px;
+      border: 1px solid #e6edf4;
+    }
+    .group-label {
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: #2b4b62;
+      letter-spacing: 0.3px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .group-label span {
+      background: #dce6f0;
+      border-radius: 20px;
+      padding: 0 10px;
+      font-size: 0.7rem;
+      color: #1d3c52;
+    }
+    .slider-item {
+      margin-bottom: 16px;
+    }
+    .slider-item:last-child {
+      margin-bottom: 0;
+    }
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: #1f3b4f;
+    }
+    .slider-header .val {
+      background: #eef3f9;
+      padding: 0 10px;
+      border-radius: 30px;
+      font-weight: 600;
+      color: #0057a3;
+      min-width: 48px;
+      text-align: center;
+    }
+    input[type="range"] {
+      width: 100%;
+      margin: 6px 0 2px;
+      height: 6px;
+      -webkit-appearance: none;
+      background: #d3dee9;
+      border-radius: 10px;
+      outline: none;
+      transition: background 0.2s;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 20px;
+      height: 20px;
+      background: #1b7cff;
+      border-radius: 30px;
+      box-shadow: 0 2px 8px rgba(20, 80, 200, 0.3);
+      cursor: pointer;
+      border: 2px solid white;
+      transition: 0.1s;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.05);
+      background: #0f6ae0;
+    }
+    .select-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px 10px;
+      margin-top: 4px;
+    }
+    .select-row select {
+      flex: 1 1 100px;
+      background: white;
+      border: 1px solid #ccd9e8;
+      border-radius: 40px;
+      padding: 8px 14px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: #0b2b3d;
+      outline: none;
+      transition: 0.15s;
+      cursor: pointer;
+    }
+    .select-row select:focus {
+      border-color: #1b7cff;
+      box-shadow: 0 0 0 3px rgba(27, 124, 255, 0.15);
+    }
+    .checkbox-group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 16px 20px;
+      margin-top: 6px;
+    }
+    .checkbox-group label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.9rem;
+      color: #1f3b4f;
+      cursor: pointer;
+    }
+    .checkbox-group input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: #1b7cff;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .result-panel {
+      background: linear-gradient(145deg, #f2f8ff, #eaf1fa);
+      border-radius: 28px;
+      padding: 20px 22px;
+      margin-top: 26px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      border: 1px solid #d8e5f2;
+    }
+    .result-item {
+      flex: 1 0 80px;
+      text-align: center;
+      padding: 6px 0;
+    }
+    .result-item .label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: #3b5d79;
+    }
+    .result-item .value {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #003d6b;
+      line-height: 1.3;
+      letter-spacing: -0.01em;
+    }
+    .result-item .unit {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: #3b6c8f;
+      margin-left: 2px;
+    }
+    .divider {
+      width: 1px;
+      height: 40px;
+      background: #c6d7e8;
+    }
+    .footnote {
+      font-size: 0.7rem;
+      color: #6c859c;
+      text-align: right;
+      margin-top: 12px;
+      border-top: 1px dashed #d0ddee;
+      padding-top: 12px;
+    }
+    @media (max-width: 480px) {
+      .sim-card { padding: 20px 16px; }
+      .result-item .value { font-size: 1.3rem; }
+      .checkbox-group { gap: 8px 12px; }
+      .select-row select { flex: 1 1 70px; }
+    }
+  </style>
+</head>
+<body>
+<div class="sim-card">
+  <h1>❄️ エアコンシミュレーター</h1>
+  <div class="subhead">⚡ 体感温度・消費電力・電気代をリアルタイム推定</div>
+
+  <div class="input-section">
+    <!-- 外的要因 -->
+    <div class="param-group">
+      <div class="group-label">🌤 外的要因 <span>外気</span></div>
+      <div class="slider-item">
+        <div class="slider-header"><span>外気温度</span><span class="val" id="outTempVal">35.0 ℃</span></div>
+        <input type="range" id="outTemp" min="0" max="40" value="35" step="0.5">
+      </div>
+      <div class="slider-item">
+        <div class="slider-header"><span>外気湿度</span><span class="val" id="outHumVal">70 %</span></div>
+        <input type="range" id="outHum" min="20" max="100" value="70" step="1">
+      </div>
+    </div>
+
+    <!-- リモコン設定 -->
+    <div class="param-group">
+      <div class="group-label">🎛 リモコン設定</div>
+      <div class="select-row">
+        <select id="modeSelect">
+          <option value="auto">自動</option>
+          <option value="cool" selected>冷房</option>
+          <option value="heat">暖房</option>
+          <option value="dry">ドライ</option>
+          <option value="fan">送風</option>
+        </select>
+        <select id="fanSelect">
+          <option value="auto" selected>自動</option>
+          <option value="low">弱</option>
+          <option value="medium">中</option>
+          <option value="high">強</option>
+        </select>
+      </div>
+      <div class="slider-item" style="margin-top:12px;">
+        <div class="slider-header"><span>設定温度</span><span class="val" id="setTempVal">27.0 ℃</span></div>
+        <input type="range" id="setTemp" min="18" max="30" value="27" step="0.5">
+      </div>
+      <div class="checkbox-group">
+        <label><input type="checkbox" id="streamerCheck"> ストリーマ機能 +15W</label>
+        <label><input type="checkbox" id="ecoCheck"> エコモード (消費電力0.85倍)</label>
+      </div>
+    </div>
+  </div>
+
+  <!-- 結果表示 -->
+  <div class="result-panel">
+    <div class="result-item">
+      <div class="label">体感温度</div>
+      <div class="value" id="sensationDisplay">25.2 <span class="unit">℃</span></div>
+    </div>
+    <div class="divider"></div>
+    <div class="result-item">
+      <div class="label">消費電力</div>
+      <div class="value" id="powerDisplay">492 <span class="unit">W</span></div>
+    </div>
+    <div class="divider"></div>
+    <div class="result-item">
+      <div class="label">電気代 (1h)</div>
+      <div class="value" id="costDisplay">15.3 <span class="unit">円</span></div>
+    </div>
+  </div>
+  <div class="footnote">※ シミュレーション概算値（実測とは異なります）</div>
+</div>
+
+<script>
+  (function() {
+    // DOM 要素
+    const outTempSlider = document.getElementById('outTemp');
+    const outHumSlider = document.getElementById('outHum');
+    const setTempSlider = document.getElementById('setTemp');
+    const modeSelect = document.getElementById('modeSelect');
+    const fanSelect = document.getElementById('fanSelect');
+    const streamerCheck = document.getElementById('streamerCheck');
+    const ecoCheck = document.getElementById('ecoCheck');
+
+    const outTempVal = document.getElementById('outTempVal');
+    const outHumVal = document.getElementById('outHumVal');
+    const setTempVal = document.getElementById('setTempVal');
+    const sensationDisplay = document.getElementById('sensationDisplay');
+    const powerDisplay = document.getElementById('powerDisplay');
+    const costDisplay = document.getElementById('costDisplay');
+
+    // 補正係数 / ベース消費電力 (冷房基準)
+    const BASE_POWER_COOL = 500;       // W (冷房)
+    const BASE_POWER_HEAT = 620;       // 暖房はやや高め
+    const BASE_POWER_DRY = 480;        // ドライ (除湿)
+    const BASE_POWER_FAN = 40;         // 送風
+
+    // 風量倍率 (自動=1.0)
+    const FAN_MULTIPLIER = {
+      'auto': 1.0,
+      'low': 0.85,
+      'medium': 1.0,
+      'high': 1.2
+    };
+
+    // モード補正 (冷房ベースに対して)
+    const MODE_POWER_FACTOR = {
+      'cool': 1.0,
+      'heat': 1.25,    // 暖房は消費電力が増える傾向
+      'dry': 1.1,      // ドライは冷房よりやや高め
+      'fan': 0.08,     // 送風はわずか
+      'auto': 1.0      // 自動は冷房基準に近い
+    };
+
+    // ---- 更新関数 ----
+    function updateAll() {
+      // 1. 値を読む
+      const outTemp = parseFloat(outTempSlider.value);
+      const outHum = parseInt(outHumSlider.value, 10);
+      const setTemp = parseFloat(setTempSlider.value);
+      const mode = modeSelect.value;
+      const fan = fanSelect.value;
+      const streamerOn = streamerCheck.checked;
+      const ecoOn = ecoCheck.checked;
+
+      // 表示用に更新
+      outTempVal.textContent = outTemp.toFixed(1) + ' ℃';
+      outHumVal.textContent = outHum + ' %';
+      setTempVal.textContent = setTemp.toFixed(1) + ' ℃';
+
+      // ---- 体感温度 (簡易ミスナール風) ----
+      // ベース = 設定温度 に外気温・湿度・風量補正
+      // 湿度補正: 湿度が高いほど体感温度が上がる (夏: 蒸し暑さ)
+      // 風量補正: 風量が強いほど体感温度が下がる (特に冷房・ドライ)
+      let baseSensation = setTemp;
+
+      // 外気温が設定温度より高いほど体感に影響 (夏の暑さ)
+      const tempDiff = outTemp - setTemp;   // 外気が設定より高いとプラス
+      let heatFactor = 0.0;
+      if (tempDiff > 0) {
+        heatFactor = Math.min(tempDiff * 0.15, 3.5);  // 最大 +3.5℃
+      } else {
+        // 外気が低い場合は影響小 (暖房時は別途)
+        heatFactor = Math.min(tempDiff * 0.05, 0);    // マイナス方向は小さい
+      }
+
+      // 湿度影響 (夏: 湿度高いと体感上昇) 外気湿度を使う
+      let humidityEffect = 0;
+      if (mode === 'cool' || mode === 'dry' || mode === 'auto') {
+        if (outHum > 60) {
+          humidityEffect = (outHum - 60) * 0.08;
+        } else if (outHum < 40) {
+          humidityEffect = (outHum - 40) * 0.03; // 乾燥で少し下がる
+        }
+        humidityEffect = Math.min(Math.max(humidityEffect, -1.5), 2.5);
+      } else if (mode === 'heat') {
+        // 暖房時は湿度が低いと体感温度が下がる (乾燥)
+        humidityEffect = (outHum - 50) * -0.05;
+        humidityEffect = Math.min(Math.max(humidityEffect, -2.0), 1.0);
+      } else {
+        // 送風
+        humidityEffect = (outHum - 55) * 0.02;
+        humidityEffect = Math.min(Math.max(humidityEffect, -0.8), 0.8);
+      }
+
+      // 風量補正 (体感温度を下げる) 冷房/ドライ/自動で有効、暖房は風量強で体感上がる場合もあるが簡易
+      let fanSensationOffset = 0;
+      const fanLevel = fan;
+      if (mode === 'cool' || mode === 'dry' || mode === 'auto') {
+        if (fanLevel === 'low') fanSensationOffset = 0.8;
+        else if (fanLevel === 'medium') fanSensationOffset = 0.0;
+        else if (fanLevel === 'high') fanSensationOffset = -1.4;
+        else if (fanLevel === 'auto') fanSensationOffset = -0.3;
+      } else if (mode === 'heat') {
+        // 暖房は風が強まると体感温度が上がる傾向 (対流)
+        if (fanLevel === 'low') fanSensationOffset = -0.5;
+        else if (fanLevel === 'medium') fanSensationOffset = 0.0;
+        else if (fanLevel === 'high') fanSensationOffset = 0.8;
+        else if (fanLevel === 'auto') fanSensationOffset = 0.2;
+      } else { // 送風
+        if (fanLevel === 'low') fanSensationOffset = 0.2;
+        else if (fanLevel === 'medium') fanSensationOffset = 0.0;
+        else if (fanLevel === 'high') fanSensationOffset = -1.0;
+        else if (fanLevel === 'auto') fanSensationOffset = -0.2;
+      }
+
+      let sensation = baseSensation + heatFactor + humidityEffect + fanSensationOffset;
+      // クリッピング (体感温度が極端にならないように)
+      sensation = Math.min(Math.max(sensation, 12.0), 38.0);
+
+      // ---- 消費電力計算 ----
+      // ベース電力 (モード)
+      let basePower = 0;
+      switch (mode) {
+        case 'cool': basePower = BASE_POWER_COOL; break;
+        case 'heat': basePower = BASE_POWER_HEAT; break;
+        case 'dry': basePower = BASE_POWER_DRY; break;
+        case 'fan': basePower = BASE_POWER_FAN; break;
+        case 'auto':
+        default: basePower = BASE_POWER_COOL; break;
+      }
+
+      // 外気温度と設定温度の差による補正 (差が大きいほど消費大)
+      const diff = Math.abs(outTemp - setTemp);
+      let diffFactor = 1.0 + (diff * 0.035);  // 最大で 40℃差なら 2.4倍程度
+      diffFactor = Math.min(diffFactor, 2.8);
+
+      // モード別追加補正 (冷房/暖房で差の効き方を調整)
+      let modeDiffAdjust = 1.0;
+      if (mode === 'cool' || mode === 'auto') {
+        modeDiffAdjust = 1.0;
+      } else if (mode === 'heat') {
+        modeDiffAdjust = 1.2;   // 暖房は外気が低いほど効くが、簡易的に差を強調
+      } else if (mode === 'dry') {
+        modeDiffAdjust = 0.9;
+      } else if (mode === 'fan') {
+        modeDiffAdjust = 0.3;   // 送風は差の影響小さく
+      }
+
+      // 風量補正
+      const fanMult = FAN_MULTIPLIER[fan] || 1.0;
+
+      // モード係数
+      const modeFactor = MODE_POWER_FACTOR[mode] || 1.0;
+
+      // ストリーマ
+      const streamerAdd = streamerOn ? 15 : 0;
+
+      // エコモード (0.85倍)
+      const ecoFactor = ecoOn ? 0.85 : 1.0;
+
+      // 電力計算
+      let power = basePower * diffFactor * modeDiffAdjust * fanMult * modeFactor * ecoFactor + streamerAdd;
+      // 送風のときはベースが小さいので補正
+      if (mode === 'fan') {
+        power = Math.min(power, 80); // 送風は最大80W程度
+      }
+      // 下限・上限
+      power = Math.min(Math.max(power, 5), 2500);
+      power = Math.round(power * 10) / 10;
+
+      // ---- 電気代 (1時間) ----
+      const unitPrice = 31; // 円/kWh
+      const costPerHour = (power / 1000) * unitPrice;
+      const costRounded = Math.round(costPerHour * 10) / 10;
+
+      // ---- DOM反映 ----
+      sensationDisplay.innerHTML = sensation.toFixed(1) + ' <span class="unit">℃</span>';
+      powerDisplay.innerHTML = power.toFixed(1) + ' <span class="unit">W</span>';
+      costDisplay.innerHTML = costRounded.toFixed(1) + ' <span class="unit">円</span>';
+    }
+
+    // すべての入力にイベントを貼る
+    const inputs = [outTempSlider, outHumSlider, setTempSlider, modeSelect, fanSelect, streamerCheck, ecoCheck];
+    inputs.forEach(el => {
+      el.addEventListener('input', updateAll);
+      el.addEventListener('change', updateAll);
+    });
+
+    // 初期表示
+    updateAll();
+  })();
+</script>
+</body>
+</html>
